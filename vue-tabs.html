@@ -17,6 +17,9 @@
 
     </div>
     <script>
+        //  给每个 标签都写一个组件，并 给div 和class类名  例：<div class="tabs"> <slot/> </div>
+        //slot 可以拿到 new Vue  中template 的内容
+        
         Vue.component('tabs', {
             props: ['selectedTab'],
             template: `
@@ -24,13 +27,18 @@
                 <slot/>
             </div>
         `,
+        // 由于这里没有 子元素 ，需要一个钩子函数联系子元素 this.$children
+        // 给每个子元素组件一个 name 用于区分子元素 例：name: 'tabs-navs',
             mounted() {
                 this.$children.forEach((vm) => {
+                    // 遍历子元素 
                     if (vm.$options.name === "tabs-navs") {
                         vm.setSelectedTab(this.selectedTab)
+                        // vm是 爸爸 ; this是 爷爷 
+                        //  setSelectedTab  让tabs-navs（爸爸） 自己拿到 爷爷的 selectedTab属性
                         vm.$on('update:selectedTab', (e) => {
-                            console.log('爷爷知道了')
                             this.$emit('update:selectedTab', e)
+                            //   tabs（爷爷） 将 update:selectedTab 事件 传给 外面
                         })
                     } else if (vm.$options.name === "tabs-panes") {
                         vm.setSelectedTab(this.selectedTab)
@@ -64,22 +72,26 @@
                     this.selectedTab = tab
                     this.$children.forEach((vm) => {
                         vm.setSelectedTab(tab)
+                        // 拿到  tabs-navs（爸爸）的  SelectedTab
                     })
                 }
             },
             mounted() {
                 this.$children.forEach((vm) => {
-
+                    //  找到tabs-navs-items（孙子）元素 再监听tabs-navs-items（孙子）元素 
                     if (vm.$options.name === 'tabs-navs-item') {
-
                         vm.$on('update:selectedTab', (e) => {
-                            console.log('爸爸知道了')
                             this.$emit('update:selectedTab', e)
+                            // 将 update:selectedTab 事件 传给  tabs（爷爷）
                         })
                     }
                 })
             },
         })
+        //  tabs-navs-items（孙子） 有 name ,但是没有 selectedTab 属性，需要从 tabs（爷爷） 中拿到
+        // tabs 有 selectedTab 属性
+        //  Vue  并没有提供 爷爷 与 孙子 之间通信的方法，只有父子之间可以
+        // 这里的思路就是tabs-navs（爸爸） 先拿到 tabs（爷爷） 的selectedTab 属性 ，再由tabs-navs（爸爸）传给tabs-navs-items（孙子）
         Vue.component('tabs-navs-items', {
             name: "tabs-navs-item",
             props: ['name'],
@@ -93,19 +105,20 @@
               <slot/>
             </div>
         `,
-            computed: {
+            computed: { 
+                //计算属相，添加 active 类
                 active() {
                     return this.selectedTab === this.name
+                // 选中的 tab 等于 name 的时候就添加 active 类
                 }
             },
             methods: {
                 setSelectedTab(tab) {
                     this.selectedTab = tab
-                    console.log('儿子的selectedTab 更新')
                 },
                 onClick() {
-                    console.log('儿子触发事件')
                     this.$emit('update:selectedTab', this.name)
+                    // 将 update:selectedTab 事件 传给  tabs-navs（爸爸）
                 }
             }
         })
@@ -119,8 +132,11 @@
             template: `
             <div class = "tabs-panes">
                 <slot/>
+                
             </div>
-        `,
+        ` 
+        
+        ,
             methods: {
                 setSelectedTab(tab) {
                     this.selectedTab = tab
@@ -159,6 +175,7 @@
             data: {
                 value: 'tab1'
             },
+            // 最外面的监听  tabs（爷爷）；需要最外面的来修改 selectedTab
             template: `
         <div>
         <tabs :selectedTab.sync = "value" >
